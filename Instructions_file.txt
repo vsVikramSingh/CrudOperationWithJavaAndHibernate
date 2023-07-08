@@ -102,13 +102,13 @@ Create hibernamte configuration file: hibernate.cfg.xml
 		com.mysql.cj.jdbc.Driver
 		</property>
 		<property name="hibernate.connection.url">
-		jdbc:mysql://localhost:3306/cdac
+		jdbc:mysql://localhost:3306/your_database_name
 		</property>
 		<property name="hibernate.connection.username">
-		root
+		your_username_of_mysql
 		</property>
 		<property name="hibernate.connection.password">
-		San@123!
+		your_password
 		</property>
 		<property name="hibernate.connection.pool_size">
 		1
