@@ -1,0 +1,529 @@
+Step1:
+Creating new maven application called: 203.HibernateEmployeeMangerWithMySql
+
+Step2:
+Add required all dependencies:
+	  <!-- https://mvnrepository.com/artifact/org.hibernate/hibernate-core -->
+<dependency>
+    <groupId>org.hibernate</groupId>
+    <artifactId>hibernate-core</artifactId>
+    <version>5.3.30.Final</version>
+</dependency>
+
+<!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>8.0.33</version>
+</dependency>
+
+Step3:
+Creating bean with their hbm.xml file:
+package com.cdac.training.bean;
+public class Employee {
+	private int empId;
+	private String fname;
+	private String designation;
+	private int deptId;
+	private double salary;
+	public int getEmpId() {
+		return empId;
+	}
+	public void setEmpId(int empId) {
+		this.empId = empId;
+	}
+	public String getFname() {
+		return fname;
+	}
+	public void setFname(String fname) {
+		this.fname = fname;
+	}
+	public String getDesignation() {
+		return designation;
+	}
+	public void setDesignation(String designation) {
+		this.designation = designation;
+	}
+	public int getDeptId() {
+		return deptId;
+	}
+	public void setDeptId(int deptId) {
+		this.deptId = deptId;
+	}
+	public double getSalary() {
+		return salary;
+	}
+	public void setSalary(double salary) {
+		this.salary = salary;
+	}
+	public Employee() {
+	}
+	public Employee(int empId, String fname, String designation, int deptId, double salary) {
+		this.empId = empId;
+		this.fname = fname;
+		this.designation = designation;
+		this.deptId = deptId;
+		this.salary = salary;
+	}
+	@Override
+	public String toString() {
+		return "\nEmployee --:" + empId + ", " + fname + ", " + 
+	designation + ", " + deptId + ", " + salary;
+	}
+}
+
+---------------
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+"-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+<class name="com.cdac.training.bean.Employee" table="employee">
+	<id name="empId" type="int" column="empid">
+		<generator class="increment"/>
+	</id>
+	<property name="fname" column="fname"/>
+	<property name="designation" column="designation"/>
+	<property name="deptId" column="deptId"/>
+	<property name="salary" column="salary"/>
+</class>
+</hibernate-mapping>
+
+
+Step4:
+Create hibernamte configuration file: hibernate.cfg.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+"-//Hibernate/Hibernate Configuration DTD//EN"
+"http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+	<session-factory>
+		<property name="hibernate.connection.driver_class">
+		com.mysql.cj.jdbc.Driver
+		</property>
+		<property name="hibernate.connection.url">
+		jdbc:mysql://localhost:3306/cdac
+		</property>
+		<property name="hibernate.connection.username">
+		root
+		</property>
+		<property name="hibernate.connection.password">
+		San@123!
+		</property>
+		<property name="hibernate.connection.pool_size">
+		1
+		</property>
+		<property name="hibernate.hbm2ddl.auto">
+		update
+		</property>
+		
+		<!-- Hibernate Mapping -->
+		<mapping resource="com/cdac/training/bean/employee.hbm.xml"/>
+		
+	</session-factory>
+</hibernate-configuration>
+
+Step5:
+Create an interface called EmployeeManager as following:
+package com.cdac.training.dao;
+import java.util.List;
+import com.cdac.training.bean.Employee;
+public interface EmployeeManager {
+	//1. Get Employee record by passing empId
+	Employee getEmployeeById(int empId);
+	
+	//2. Get All Employees record
+	List<Employee> getEmployees();
+	
+	//3. Add new employee data
+	boolean addEmployee(Employee employee);
+	
+	//4. Modify employee info
+	void updateEmployee(Employee employee);
+	
+	//5. Delete employee info by id
+	void deleteEmployee(int empId);
+}
+
+Step6: Implementing interface EmployeeManager in class EmployeeManagerImpl as following:
+package com.cdac.training.dao;
+import java.util.List;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import com.cdac.training.bean.Employee;
+import com.cdac.training.session.CreateNewSession;
+
+public class EmployeeManagerImpl implements EmployeeManager {
+	private Session session;
+	
+	public EmployeeManagerImpl() {
+		session=CreateNewSession.getSession();
+	}
+
+	public Session getSession() {
+		return session;
+	}
+
+	@Override
+	public Employee getEmployeeById(int empId) {
+		Employee employee=null;
+		employee=session.get(Employee.class, empId);
+		return employee;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<Employee> getEmployees() {
+		return (session.createQuery("from Employee").list());
+	}
+
+	@Override
+	public boolean addEmployee(Employee employee) {
+		Transaction tx=session.beginTransaction();
+		int i=(int) session.save(employee);
+		
+		if(i>0) {
+			tx.commit();
+			return true;
+		}else {
+			tx.rollback();
+			return false;
+		}
+	}
+
+	@Override
+	public void updateEmployee(Employee employee) {
+		Transaction tx=session.beginTransaction();
+		session.update(employee);
+		tx.commit();
+		System.out.println("Employee Info has been saved...");
+	}
+
+	@Override
+	public void deleteEmployee(int empId) {
+		Employee employee=null;
+		employee=getEmployeeById(empId);
+		if(employee!=null) {
+			System.out.println(employee+" info found");
+			Transaction tx=session.beginTransaction();
+			session.delete(employee);
+			tx.commit();
+			System.out.println(employee+" info deleted");
+		}else {
+			System.err.println("Entered employee id:"+empId+" not found..");
+		}
+	}
+}
+
+
+Step7:
+Modify App.java as following:
+package com.cdac.training;
+import java.util.List;
+import java.util.Scanner;
+import com.cdac.training.dao.EmployeeManager;
+import com.cdac.training.dao.EmployeeManagerImpl;
+import com.cdac.training.bean.Employee;
+
+public class App 
+{
+    public static void main( String[] args )
+    {
+        Scanner keyboard=new Scanner(System.in);
+        EmployeeManager manager=new EmployeeManagerImpl();
+        int empId;
+        Employee emp=null;
+        int choice=1;
+        while(choice!=0) {
+        	System.out.print("\nEmployee Manager Application");
+        	System.out.print("\n-----------------------------");
+        	System.out.print("\n1. Display Employee Info By Id");
+        	System.out.print("\n2. Display All Employees Info");
+        	System.out.print("\n3. Add New Employee Info");
+        	System.out.print("\n4. Update Existing Employee Info");
+        	System.out.print("\n5. Delete Existing Employee Info By Id");
+        	System.out.print("\n0. Terminate Application");
+        	System.out.print("\n-----------------------------");
+        	System.out.print("\nPlease Enter your choice(0-5):");
+        	choice=keyboard.nextInt(); 
+        	switch(choice) {
+        	case 1:
+        		System.out.println("Enter employee id to get employee info:");
+        		empId=keyboard.nextInt();
+        		emp=manager.getEmployeeById(empId);
+        		if(emp!=null) {
+        			System.out.println(emp);
+        		}else {
+        			System.err.println("Entered employee id:"+empId+" not found..");
+        		}
+        		break;
+        	case 2:
+        		List<Employee> list=manager.getEmployees();
+        		for(Employee employee:list) {
+        			System.out.println(employee);
+        		}
+        		break;
+        	case 3:
+        		emp=new Employee();
+        		System.out.println("Enter employee Department:");
+        		emp.setDeptId(keyboard.nextInt());
+        		System.out.println("Enter employee First Name:");
+        		emp.setFname(keyboard.next());
+        		System.out.println("Enter employee Designation:");
+        		emp.setDesignation(keyboard.next());
+        		System.out.println("Enter employee Salary:");
+        		emp.setSalary(keyboard.nextDouble());
+        		boolean status=manager.addEmployee(emp);
+        		if(status) {
+        			System.out.println("employee info saved ...");
+        		}else {
+        			System.out.println("Transaction failed ...");
+        		}
+        		break;
+        	case 4:
+        		System.out.println("Enter employee id to get employee info:");
+        		empId=keyboard.nextInt();
+        		emp=manager.getEmployeeById(empId);
+        		if(emp!=null) {
+        			System.out.println("Existing data:"+emp);
+        			System.out.println("Enter employee Department:");
+            		emp.setDeptId(keyboard.nextInt());
+            		System.out.println("Enter employee First Name:");
+            		emp.setFname(keyboard.next());
+            		System.out.println("Enter employee Designation:");
+            		emp.setDesignation(keyboard.next());
+            		System.out.println("Enter employee Salary:");
+            		emp.setSalary(keyboard.nextDouble());
+            		manager.updateEmployee(emp);
+        			
+        		}else {
+        			System.err.println("Entered employee id:"+empId+" not found..");
+        		}
+        		break;
+        	case 5:
+        		System.out.println("Enter employee id to get employee info:");
+        		empId=keyboard.nextInt();
+        		manager.deleteEmployee(empId);
+        		break;
+        	case 0:
+        		System.out.println("Thanks for using app, app terminated..");
+        		break;
+        	default:
+        		System.out.println("Valid options are 0 - 5 only...");
+        	}
+        }
+    }
+}
+
+Step8:
+Run the application and check if all proposed functionality working with output:
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):2
+Jul 08, 2023 12:57:57 PM org.hibernate.hql.internal.QueryTranslatorFactoryInitiator initiateService
+INFO: HHH000397: Using ASTQueryTranslatorFactory
+
+Employee --:1, Sunita, Tester, 1224, 45600.0
+
+Employee --:2, Manav, Developer, 1244, 95600.0
+
+Employee --:3, Amrit Pal, Manager, 1224, 85600.0
+
+Employee --:4, Harsheet, Developer, 1222, 46800.0
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):3
+Enter employee Department:
+1555
+Enter employee First Name:
+Pritee
+Enter employee Designation:
+TeamLead
+Enter employee Salary:
+57900
+employee info saved ...
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):2
+
+Employee --:1, Sunita, Tester, 1224, 45600.0
+
+Employee --:2, Manav, Developer, 1244, 95600.0
+
+Employee --:3, Amrit Pal, Manager, 1224, 85600.0
+
+Employee --:4, Harsheet, Developer, 1222, 46800.0
+
+Employee --:5, Pritee, TeamLead, 1555, 57900.0
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):1
+Enter employee id to get employee info:
+5
+
+Employee --:5, Pritee, TeamLead, 1555, 57900.0
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):4
+Enter employee id to get employee info:
+5
+Existing data:
+Employee --:5, Pritee, TeamLead, 1555, 57900.0
+Enter employee Department:
+1555
+Enter employee First Name:
+Pritee
+Enter employee Designation:
+Manager
+Enter employee Salary:
+90000
+Employee Info has been saved...
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):1
+Enter employee id to get employee info:
+5
+
+Employee --:5, Pritee, Manager, 1555, 90000.0
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):2
+
+Employee --:1, Sunita, Tester, 1224, 45600.0
+
+Employee --:2, Manav, Developer, 1244, 95600.0
+
+Employee --:3, Amrit Pal, Manager, 1224, 85600.0
+
+Employee --:4, Harsheet, Developer, 1222, 46800.0
+
+Employee --:5, Pritee, Manager, 1555, 90000.0
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):5
+Enter employee id to get employee info:
+4
+
+Employee --:4, Harsheet, Developer, 1222, 46800.0 info found
+
+Employee --:4, Harsheet, Developer, 1222, 46800.0 info deleted
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):2
+
+Employee --:1, Sunita, Tester, 1224, 45600.0
+
+Employee --:2, Manav, Developer, 1244, 95600.0
+
+Employee --:3, Amrit Pal, Manager, 1224, 85600.0
+
+Employee --:5, Pritee, Manager, 1555, 90000.0
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):1
+Enter employee id to get employee info:
+4
+Entered employee id:4 not found..
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):45
+Valid options are 0 - 5 only...
+
+Employee Manager Application
+-----------------------------
+1. Display Employee Info By Id
+2. Display All Employees Info
+3. Add New Employee Info
+4. Update Existing Employee Info
+5. Delete Existing Employee Info By Id
+0. Terminate Application
+-----------------------------
+Please Enter your choice(0-5):0
+Thanks for using app, app terminated..
